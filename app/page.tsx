@@ -1,545 +1,302 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Heart,
-  MessageSquare,
-  Plus,
-  Search,
-  Shield,
-  User as UserIcon,
-  LogOut,
-  Send,
-  Compass,
-  Menu,
-  X,
-  ArrowUp,
-  Trash2,
-  CheckCircle2,
-  Mail,
-} from "lucide-react";
-import { User, Post, Suggestion } from "./types";
-import {
-  INITIAL_USERS,
-  INITIAL_POSTS,
-  INITIAL_SUGGESTIONS,
-  GRAND_LINE_PICKS,
-} from "./data";
+import React, { useState } from "react";
+import { Heart, MessageSquare, Plus, Search, Shield, Compass, Mail, User } from "lucide-react";
 
-type Tab =
-  | "Posts"
-  | "Introduction"
-  | "Suggestion"
-  | "Grand Line"
-  | "Contact Us"
-  | "Admin Panel"
-  | "Profile";
+type Tab = "Introduction" | "Posts" | "Suggestion" | "Grand Line" | "Contact Us" | "Admin Panel";
 
 export default function BamoApp() {
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>(INITIAL_SUGGESTIONS);
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
-  const [activeTab, setActiveTab] = useState<Tab>("Posts");
-  const [viewedProfile, setViewedProfile] = useState<User | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>("Posts");
+  const [user, setUser] = useState<{ name: string; role: "Admin" | "Member" } | null>({
+    name: "Tariq (Admin)",
+    role: "Admin",
+  });
+  const [search, setSearch] = useState("");
+  const [tag, setTag] = useState("All");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [tagsText, setTagsText] = useState("Manhwa, Shonen");
+  const [commentText, setCommentText] = useState("");
+  const [posts, setPosts] = useState([
+    {
+      id: 1,
+      author: "Nusrat",
+      role: "Member",
+      title: "Omniscient Reader's Viewpoint — Why it hooks you early",
+      body: "Kim Dokja reading a web novel that becomes reality is peak concept execution.",
+      tags: ["Manhwa", "Discussion"],
+      likes: 12,
+      comments: ["So true! Can't wait for the next arc."],
+    },
+    {
+      id: 2,
+      author: "Arafat",
+      role: "Member",
+      title: "One Piece Weekly Theory & Favorite Arcs",
+      body: "Share your favorite One Piece moments and anime/manhwa picks here.",
+      tags: ["Anime", "Shonen"],
+      likes: 19,
+      comments: [],
+    },
+  ]);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTag, setSelectedTag] = useState<string>("All");
-
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
-  const [createPostOpen, setCreatePostOpen] = useState(false);
-
-  const [authName, setAuthName] = useState("");
-  const [authUsername, setAuthUsername] = useState("");
-  const [authEmail, setAuthEmail] = useState("");
-  const [postTitle, setPostTitle] = useState("");
-  const [postContent, setPostContent] = useState("");
-  const [postTags, setPostTags] = useState("");
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-
-  const [sugTitle, setSugTitle] = useState("");
-  const [sugCategory, setSugCategory] = useState<"Anime" | "Manhwa" | "Site Feature">("Manhwa");
-  const [sugDesc, setSugDesc] = useState("");
-
-  const [contactSent, setContactSent] = useState(false);
-
-  useEffect(() => {
-    const savedUsers = localStorage.getItem("bamo_users");
-    const savedPosts = localStorage.getItem("bamo_posts");
-    const savedSuggestions = localStorage.getItem("bamo_suggestions");
-    if (savedUsers) setUsers(JSON.parse(savedUsers));
-    if (savedPosts) setPosts(JSON.parse(savedPosts));
-    if (savedSuggestions) setSuggestions(JSON.parse(savedSuggestions));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("bamo_users", JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    localStorage.setItem("bamo_posts", JSON.stringify(posts));
-  }, [posts]);
-
-  useEffect(() => {
-    localStorage.setItem("bamo_suggestions", JSON.stringify(suggestions));
-  }, [suggestions]);
-
-  const navTabs: Tab[] = [
+  const tabs: Tab[] = [
     "Introduction",
     "Posts",
     "Suggestion",
     "Grand Line",
     "Contact Us",
-    ...(currentUser?.role === "Admin" ? (["Admin Panel"] as Tab[]) : []),
+    ...(user?.role === "Admin" ? (["Admin Panel"] as Tab[]) : []),
   ];
 
-  const allTags = ["All", ...Array.from(new Set(posts.flatMap((p) => p.tags)))];
-
-  const openProfile = (user: User) => {
-    setViewedProfile(user);
-    setActiveTab("Profile");
-    setMobileMenuOpen(false);
-  };
-
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const addPost = (e: React.FormEvent) => {
     e.preventDefault();
-    if (authMode === "login") {
-      const found = users.find(
-        (u) => u.email.toLowerCase() === authEmail.toLowerCase() || u.username === authEmail
-      );
-      if (found) {
-        if (found.banned) {
-          alert("This account has been suspended by an Admin.");
-          return;
-        }
-        setCurrentUser(found);
-        setAuthModalOpen(false);
-      } else {
-        alert("User not found. Try admin@bamo.bd or register a new account.");
-      }
-    } else {
-      if (!authName || !authUsername || !authEmail) return;
-      const newUser: User = {
-        id: `u_${Date.now()}`,
-        name: authName,
-        username: authUsername.toLowerCase().replace(/\s+/g, "_"),
-        email: authEmail,
-        role: "Member",
-        bio: "New member of Bengali Ani-Manhwa Obsession.",
-        joinedAt: "Nov 2026",
-      };
-      setUsers([...users, newUser]);
-      setCurrentUser(newUser);
-      setAuthModalOpen(false);
-    }
-    setAuthName("");
-    setAuthUsername("");
-    setAuthEmail("");
+    if (!title.trim() || !body.trim()) return;
+    setPosts([
+      {
+        id: Date.now(),
+        author: user ? user.name : "Guest",
+        role: user?.role || "Member",
+        title,
+        body,
+        tags: tagsText.split(",").map((t) => t.trim()).filter(Boolean),
+        likes: 0,
+        comments: [],
+      },
+      ...posts,
+    ]);
+    setTitle("");
+    setBody("");
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser || !postTitle.trim() || !postContent.trim()) return;
-    const tagsArray = postTags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const newPost: Post = {
-      id: `p_${Date.now()}`,
-      authorId: currentUser.id,
-      title: postTitle,
-      content: postContent,
-      tags: tagsArray.length > 0 ? tagsArray : ["General"],
-      likes: [],
-      comments: [],
-      createdAt: "Just now",
-    };
-    setPosts([newPost, ...posts]);
-    setPostTitle("");
-    setPostContent("");
-    setPostTags("");
-    setCreatePostOpen(false);
-    setActiveTab("Posts");
-  };
-
-  const toggleLike = (postId: string) => {
-    if (!currentUser) {
-      setAuthModalOpen(true);
-      return;
-    }
-    setPosts(
-      posts.map((post) => {
-        if (post.id !== postId) return post;
-        const hasLiked = post.likes.includes(currentUser.id);
-        return {
-          ...post,
-          likes: hasLiked
-            ? post.likes.filter((id) => id !== currentUser.id)
-            : [...post.likes, currentUser.id],
-        };
-      })
-    );
-  };
-
-  const handleAddComment = (postId: string) => {
-    if (!currentUser) {
-      setAuthModalOpen(true);
-      return;
-    }
-    const text = commentInputs[postId]?.trim();
-    if (!text) return;
-
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              comments: [
-                ...post.comments,
-                {
-                  id: `c_${Date.now()}`,
-                  authorId: currentUser.id,
-                  content: text,
-                  createdAt: "Just now",
-                },
-              ],
-            }
-          : post
-      )
-    );
-    setCommentInputs({ ...commentInputs, [postId]: "" });
-  };
-
-  const handleDeletePost = (postId: string) => {
-    setPosts(posts.filter((p) => p.id !== postId));
-  };
-
-  const handleAddSuggestion = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) {
-      setAuthModalOpen(true);
-      return;
-    }
-    if (!sugTitle.trim() || !sugDesc.trim()) return;
-    const newSug: Suggestion = {
-      id: `s_${Date.now()}`,
-      authorId: currentUser.id,
-      title: sugTitle,
-      category: sugCategory,
-      description: sugDesc,
-      votes: [currentUser.id],
-      status: "Under Review",
-    };
-    setSuggestions([newSug, ...suggestions]);
-    setSugTitle("");
-    setSugDesc("");
-  };
-
-  const toggleVote = (sugId: string) => {
-    if (!currentUser) {
-      setAuthModalOpen(true);
-      return;
-    }
-    setSuggestions(
-      suggestions.map((s) => {
-        if (s.id !== sugId) return s;
-        const voted = s.votes.includes(currentUser.id);
-        return {
-          ...s,
-          votes: voted
-            ? s.votes.filter((id) => id !== currentUser.id)
-            : [...s.votes, currentUser.id],
-        };
-      })
-    );
-  };
-
-  const toggleRole = (userId: string) => {
-    setUsers(
-      users.map((u) =>
-        u.id === userId ? { ...u, role: u.role === "Admin" ? "Member" : "Admin" } : u
-      )
-    );
-  };
-
-  const toggleBan = (userId: string) => {
-    setUsers(users.map((u) => (u.id === userId ? { ...u, banned: !u.banned } : u)));
-  };
-
-  const filteredPosts = posts.filter((post) => {
-    const matchesTag = selectedTag === "All" || post.tags.includes(selectedTag);
-    const matchesSearch =
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesTag && matchesSearch;
-  });
+  const visiblePosts = posts.filter(
+    (p) =>
+      (tag === "All" || p.tags.includes(tag)) &&
+      (p.title.toLowerCase().includes(search.toLowerCase()) ||
+        p.body.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-neutral-200">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <button
-            onClick={() => setActiveTab("Posts")}
-            className="text-2xl font-black tracking-tighter text-neutral-900 hover:opacity-80 transition"
-            title="Bengali Ani-Manhwa Obsession"
-          >
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] text-[#111827]">
+      <header className="sticky top-0 z-30 bg-white border-b border-neutral-200">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <button onClick={() => setTab("Posts")} className="text-2xl font-black tracking-tighter">
             BAMO
           </button>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navTabs.map((tab) => (
+          <nav className="flex flex-wrap items-center gap-1">
+            {tabs.map((item) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
-                  activeTab === tab
-                    ? "bg-neutral-900 text-white"
-                    : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                key={item}
+                onClick={() => setTab(item)}
+                className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium ${
+                  tab === item ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"
                 }`}
               >
-                {tab}
+                {item}
               </button>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
-            {currentUser ? (
-              <>
-                <button
-                  onClick={() => setCreatePostOpen(true)}
-                  className="inline-flex items-center gap-1.5 bg-neutral-900 text-white text-sm font-medium px-3 py-1.5 rounded-md hover:bg-neutral-800 transition"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Post</span>
-                </button>
-                <button
-                  onClick={() => openProfile(currentUser)}
-                  className="inline-flex items-center gap-2 border border-neutral-200 bg-white px-2.5 py-1.5 rounded-md text-sm font-medium hover:bg-neutral-50 transition"
-                >
-                  <UserIcon className="w-4 h-4 text-neutral-600" />
-                  <span className="hidden sm:inline">{currentUser.username}</span>
-                </button>
-                <button
-                  onClick={() => setCurrentUser(null)}
-                  title="Log Out"
-                  className="p-2 text-neutral-500 hover:text-neutral-900 rounded-md hover:bg-neutral-100"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => {
-                  setAuthMode("login");
-                  setAuthModalOpen(true);
-                }}
-                className="bg-neutral-900 text-white text-sm font-medium px-4 py-1.5 rounded-md hover:bg-neutral-800 transition"
-              >
-                Log In
-              </button>
-            )}
-
+          <div className="flex items-center gap-2 text-xs">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-neutral-600 hover:bg-neutral-100 rounded-md"
+              onClick={() =>
+                setUser(
+                  user?.role === "Admin"
+                    ? { name: "Rafid (Member)", role: "Member" }
+                    : { name: "Tariq (Admin)", role: "Admin" }
+                )
+              }
+              className="px-2.5 py-1.5 border border-neutral-200 rounded-md bg-white flex items-center gap-1"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <User className="w-3.5 h-3.5" />
+              <span>{user ? `${user.name}` : "Guest"}</span>
             </button>
           </div>
         </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-neutral-200 bg-white px-4 py-3 space-y-1">
-            {navTabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  setMobileMenuOpen(false);
-                }}
-                className={`block w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  activeTab === tab
-                    ? "bg-neutral-900 text-white"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        )}
       </header>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
-        {activeTab === "Posts" && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Community Feed</h1>
-                <p className="text-sm text-neutral-500">
-                  Bengali Ani-Manhwa Obsession discussions, reviews & theories.
-                </p>
-              </div>
-              <div className="relative w-full sm:w-64">
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8 space-y-6">
+        {tab === "Posts" && (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h1 className="text-2xl font-bold">Bengali Ani-Manhwa Obsession</h1>
+              <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
                 <input
-                  type="text"
-                  placeholder="Search posts or tags..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-sm bg-white border border-neutral-200 rounded-md focus:outline-none focus:border-neutral-900"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search posts..."
+                  className="pl-9 pr-3 py-1.5 text-sm bg-white border border-neutral-200 rounded-md"
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {allTags.map((tag) => (
+            <div className="flex flex-wrap gap-2">
+              {["All", "Manhwa", "Anime", "Shonen", "Discussion"].map((t) => (
                 <button
-                  key={tag}
-                  onClick={() => setSelectedTag(tag)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition ${
-                    selectedTag === tag
-                      ? "bg-neutral-900 text-white border-neutral-900"
-                      : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400"
+                  key={t}
+                  onClick={() => setTag(t)}
+                  className={`px-3 py-1 rounded-full text-xs border ${
+                    tag === t ? "bg-neutral-900 text-white border-neutral-900" : "bg-white border-neutral-200"
                   }`}
                 >
-                  {tag === "All" ? "All Genres" : `#${tag}`}
+                  {t}
                 </button>
               ))}
             </div>
 
+            <form onSubmit={addPost} className="bg-white border border-neutral-200 rounded-lg p-4 space-y-3">
+              <div className="font-semibold text-sm flex items-center gap-1.5">
+                <Plus className="w-4 h-4" /> Create a Post
+              </div>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Post title"
+                className="w-full text-sm border border-neutral-200 rounded-md px-3 py-2"
+              />
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your anime or manhwa post..."
+                rows={3}
+                className="w-full text-sm border border-neutral-200 rounded-md px-3 py-2"
+              />
+              <input
+                value={tagsText}
+                onChange={(e) => setTagsText(e.target.value)}
+                placeholder="Genres/tags (comma separated)"
+                className="w-full text-sm border border-neutral-200 rounded-md px-3 py-2"
+              />
+              <button type="submit" className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-md">
+                Publish
+              </button>
+            </form>
+
             <div className="space-y-4">
-              {filteredPosts.map((post) => {
-                const author = users.find((u) => u.id === post.authorId) || users[0];
-                const isLiked = currentUser ? post.likes.includes(currentUser.id) : false;
-
-                return (
-                  <article
-                    key={post.id}
-                    className="bg-white border border-neutral-200 rounded-lg p-5 space-y-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <button
-                        onClick={() => openProfile(author)}
-                        className="flex items-center gap-2.5 text-left group"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center text-xs font-bold">
-                          {author.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold group-hover:underline">
-                              {author.name}
-                            </span>
-                            {author.role === "Admin" && (
-                              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-neutral-100 border border-neutral-300 rounded font-semibold">
-                                Admin
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-neutral-500">
-                            @{author.username} • {post.createdAt}
-                          </p>
-                        </div>
-                      </button>
-
-                      {(currentUser?.role === "Admin" || currentUser?.id === post.authorId) && (
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          className="text-neutral-400 hover:text-red-600 p-1"
-                          title="Delete post"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div>
-                      <h2 className="text-lg font-semibold text-neutral-900">{post.title}</h2>
-                      <p className="mt-1.5 text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
-                        {post.content}
+              {visiblePosts.map((p) => (
+                <article key={p.id} className="bg-white border border-neutral-200 rounded-lg p-5 space-y-3">
+                  <div className="text-xs text-neutral-500">
+                    <strong className="text-neutral-900">{p.author}</strong> • {p.role}
+                  </div>
+                  <h2 className="text-lg font-semibold">{p.title}</h2>
+                  <p className="text-sm text-neutral-700">{p.body}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.tags.map((tg) => (
+                      <span key={tg} className="text-xs px-2 py-0.5 bg-neutral-100 rounded">
+                        #{tg}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="pt-2 border-t border-neutral-100 flex items-center gap-5 text-sm">
+                    <button
+                      onClick={() =>
+                        setPosts(posts.map((item) => (item.id === p.id ? { ...item, likes: item.likes + 1 } : item)))
+                      }
+                      className="flex items-center gap-1 text-rose-600 font-medium"
+                    >
+                      <Heart className="w-4 h-4 fill-rose-600" /> {p.likes}
+                    </button>
+                    <span className="flex items-center gap-1 text-neutral-500">
+                      <MessageSquare className="w-4 h-4" /> {p.comments.length}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 pt-1">
+                    {p.comments.map((c, idx) => (
+                      <p key={idx} className="text-xs bg-neutral-50 p-2 rounded">
+                        {c}
                       </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {post.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          onClick={() => setSelectedTag(tag)}
-                          className="cursor-pointer text-xs px-2.5 py-0.5 rounded-md bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="pt-3 border-t border-neutral-100 flex items-center gap-6">
+                    ))}
+                    <div className="flex gap-2">
+                      <input
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 text-xs border border-neutral-200 rounded-md px-2.5 py-1.5"
+                      />
                       <button
-                        onClick={() => toggleLike(post.id)}
-                        className={`inline-flex items-center gap-1.5 text-sm font-medium transition ${
-                          isLiked ? "text-rose-600" : "text-neutral-500 hover:text-neutral-900"
-                        }`}
+                        onClick={() => {
+                          if (!commentText.trim()) return;
+                          setPosts(
+                            posts.map((item) =>
+                              item.id === p.id ? { ...item, comments: [...item.comments, commentText] } : item
+                            )
+                          );
+                          setCommentText("");
+                        }}
+                        className="px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-md"
                       >
-                        <Heart className={`w-4 h-4 ${isLiked ? "fill-rose-600" : ""}`} />
-                        <span>{post.likes.length}</span>
+                        Comment
                       </button>
-
-                      <div className="inline-flex items-center gap-1.5 text-sm text-neutral-500">
-                        <MessageSquare className="w-4 h-4" />
-                        <span>{post.comments.length} Comments</span>
-                      </div>
                     </div>
-
-                    <div className="bg-neutral-50 rounded-md p-3.5 space-y-3">
-                      {post.comments.map((c) => {
-                        const cAuthor = users.find((u) => u.id === c.authorId) || users[0];
-                        return (
-                          <div key={c.id} className="text-sm flex justify-between gap-2">
-                            <div>
-                              <button
-                                onClick={() => openProfile(cAuthor)}
-                                className="font-semibold text-neutral-900 hover:underline mr-2"
-                              >
-                                {cAuthor.name}
-                              </button>
-                              <span className="text-neutral-700">{c.content}</span>
-                            </div>
-                            <span className="text-xs text-neutral-400 shrink-0">{c.createdAt}</span>
-                          </div>
-                        );
-                      })}
-
-                      <div className="flex gap-2 pt-1">
-                        <input
-                          type="text"
-                          placeholder={
-                            currentUser ? "Write a comment..." : "Log in to comment..."
-                          }
-                          value={commentInputs[post.id] || ""}
-                          onChange={(e) =>
-                            setCommentInputs({ ...commentInputs, [post.id]: e.target.value })
-                          }
-                          onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
-                          className="flex-1 text-sm bg-white border border-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-900"
-                        />
-                        <button
-                          onClick={() => handleAddComment(post.id)}
-                          className="px-3 py-1.5 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 transition"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+                  </div>
+                </article>
+              ))}
             </div>
+          </>
+        )}
+
+        {tab === "Introduction" && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 space-y-3">
+            <h1 className="text-2xl font-bold">Welcome to BAMO</h1>
+            <p className="text-sm text-neutral-600">
+              Bengali Ani-Manhwa Obsession is a minimalist space for Bengali anime, manga, and manhwa fans to share posts, discuss genres, and discover new series.
+            </p>
           </div>
         )}
 
-        {activeTab === "Introduction" && (
-          <div className="bg-white border border-neutral
+        {tab === "Suggestion" && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 space-y-2">
+            <h1 className="text-xl font-bold">Suggestions</h1>
+            <p className="text-sm text-neutral-600">Suggest anime, manhwa, or site improvements for BAMO.</p>
+          </div>
+        )}
+
+        {tab === "Grand Line" && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 space-y-2">
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <Compass className="w-5 h-5" /> Grand Line
+            </h1>
+            <p className="text-sm text-neutral-600">Featured classics and top-rated picks in the BAMO community.</p>
+          </div>
+        )}
+
+        {tab === "Contact Us" && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 space-y-2">
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <Mail className="w-5 h-5" /> Contact Us
+            </h1>
+            <p className="text-sm text-neutral-600">Reach out to the BAMO team for support or moderation inquiries.</p>
+          </div>
+        )}
+
+        {tab === "Admin Panel" && user?.role === "Admin" && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 space-y-3">
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <Shield className="w-5 h-5" /> Admin Panel
+            </h1>
+            <p className="text-sm text-neutral-600">Check members and manage community roles.</p>
+            <div className="text-sm border-t border-neutral-100 pt-2 space-y-1">
+              <div>• Tariq — Admin</div>
+              <div>• Nusrat — Member</div>
+              <div>• Arafat — Member</div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer className="bg-white border-t border-neutral-200 py-5 px-4 text-xs text-neutral-500">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          <span>BAMO — Bengali Ani-Manhwa Obsession</span>
+          <div className="flex gap-4">
+            <a href="#facebook">Facebook</a>
+            <a href="#discord">Discord</a>
+            <a href="#instagram">Instagram</a>
+            <a href="#youtube">YouTube</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
